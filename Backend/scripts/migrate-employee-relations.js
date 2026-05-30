@@ -49,13 +49,15 @@ async function main() {
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "Employee_companyId_departmentId_idx" ON "Employee"("companyId", "departmentId")')
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "EmploymentDetails_companyId_idx" ON "EmploymentDetails"("companyId")')
 
-  await prisma.$executeRawUnsafe(`
-    UPDATE "Employee" e
-    SET "userId" = u.id
-    FROM "User" u
-    WHERE u."employeeId" = e.id
-      AND e."userId" IS NULL
-  `)
+  if (await columnExists('User', 'employeeId')) {
+    await prisma.$executeRawUnsafe(`
+      UPDATE "Employee" e
+      SET "userId" = u.id
+      FROM "User" u
+      WHERE u."employeeId" = e.id
+        AND e."userId" IS NULL
+    `)
+  }
 
   const employees = await prisma.$queryRawUnsafe(`
     SELECT
@@ -132,6 +134,23 @@ async function addConstraint(name, sql) {
       throw error
     }
   }
+}
+
+async function columnExists(tableName, columnName) {
+  const result = await prisma.$queryRawUnsafe(
+    `
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = $1
+        AND column_name = $2
+      LIMIT 1
+    `,
+    tableName,
+    columnName,
+  )
+
+  return result.length > 0
 }
 
 main()
