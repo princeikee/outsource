@@ -13,11 +13,13 @@ const corsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   origin(origin, callback) {
-    if (!origin || env.frontendUrls.includes(origin)) {
+    const normalizedOrigin = origin?.replace(/\/+$/, '')
+
+    if (!origin || env.frontendUrls.includes(normalizedOrigin)) {
       return callback(null, true)
     }
 
-    return callback(new Error(`Origin ${origin} is not allowed by CORS`))
+    return callback(null, false)
   },
 }
 
