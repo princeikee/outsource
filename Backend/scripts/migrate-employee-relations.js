@@ -122,7 +122,15 @@ async function main() {
 async function addConstraint(name, sql) {
   const exists = await prisma.$queryRawUnsafe('SELECT 1 FROM pg_constraint WHERE conname = $1 LIMIT 1', name)
   if (!exists.length) {
-    await prisma.$executeRawUnsafe(sql)
+    try {
+      await prisma.$executeRawUnsafe(sql)
+    } catch (error) {
+      if (error?.code === 'P2010' && ['42P07', '42710'].includes(error?.meta?.code)) {
+        return
+      }
+
+      throw error
+    }
   }
 }
 
