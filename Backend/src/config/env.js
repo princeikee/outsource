@@ -11,7 +11,7 @@ export const env = {
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   frontendUrls: (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || 'http://localhost:5173')
     .split(',')
-    .map((url) => url.trim())
+    .map((url) => url.trim().replace(/\/+$/, ''))
     .filter(Boolean),
   superAdminEmail: process.env.SUPER_ADMIN_EMAIL,
   superAdminName: process.env.SUPER_ADMIN_NAME || 'Platform Owner',
