@@ -8,9 +8,22 @@ import { env } from './config/env.js'
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js'
 
 const app = express()
+const corsOptions = {
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  origin(origin, callback) {
+    if (!origin || env.frontendUrls.includes(origin)) {
+      return callback(null, true)
+    }
+
+    return callback(new Error(`Origin ${origin} is not allowed by CORS`))
+  },
+}
 
 app.use(helmet())
-app.use(cors({ origin: env.frontendUrl, credentials: true }))
+app.use(cors(corsOptions))
+app.options(/.*/, cors(corsOptions))
 app.use(express.json({ limit: '1mb' }))
 app.use(express.urlencoded({ extended: true }))
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'))
