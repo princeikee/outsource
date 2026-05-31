@@ -42,7 +42,8 @@ const employeePages = {
   settings: { title: 'Settings', path: '/employee/settings' },
 }
 
-const AUTH_STORAGE_KEY = 'nova_erp_auth'
+const AUTH_STORAGE_KEY = 'taskflow_erp_auth'
+const LEGACY_AUTH_STORAGE_KEY = 'nova_erp_auth'
 
 export default function App() {
   const [auth, setAuth] = useState(readStoredAuth)
@@ -106,11 +107,13 @@ export default function App() {
 
   function saveAuth(result) {
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(result))
+    localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY)
     setAuth(result)
   }
 
   function handleLogout() {
     localStorage.removeItem(AUTH_STORAGE_KEY)
+    localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY)
     setAuth(null)
     navigate('/login', { replace: true })
   }
@@ -263,7 +266,8 @@ function formatAuthError(error) {
 
 function readStoredAuth() {
   try {
-    return JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY))
+    const stored = localStorage.getItem(AUTH_STORAGE_KEY) || localStorage.getItem(LEGACY_AUTH_STORAGE_KEY)
+    return stored ? JSON.parse(stored) : null
   } catch {
     return null
   }

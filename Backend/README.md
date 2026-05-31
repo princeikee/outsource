@@ -1,4 +1,4 @@
-# Nova ERP Backend
+# Taskflow ERP Backend
 
 Production-ready MVP backend for a multi-tenant SaaS ERP using Node.js, Express, PostgreSQL, Prisma, JWT, and Socket.io.
 
