@@ -59,25 +59,31 @@ async function main() {
     `)
   }
 
+  const hasEmployeeDepartment = await columnExists('Employee', 'department')
+  const hasEmployeeRole = await columnExists('Employee', 'role')
+  const hasEmployeeJobTitle = await columnExists('Employee', 'jobTitle')
+  const hasEmployeeHireDate = await columnExists('Employee', 'hireDate')
+  const hasSalaryAssignment = await tableExists('SalaryAssignment')
+
   const employees = await prisma.$queryRawUnsafe(`
     SELECT
       e.id,
       e."companyId",
-      e.department,
-      e.role,
-      e."jobTitle",
-      e."hireDate",
-      s.amount,
-      s.currency
+      ${hasEmployeeDepartment ? 'e.department' : 'NULL'} AS department,
+      ${hasEmployeeRole ? 'e.role' : 'NULL'} AS role,
+      ${hasEmployeeJobTitle ? 'e."jobTitle"' : 'NULL'} AS "jobTitle",
+      ${hasEmployeeHireDate ? 'e."hireDate"' : 'NULL'} AS "hireDate",
+      ${hasSalaryAssignment ? 's.amount' : 'NULL'} AS amount,
+      ${hasSalaryAssignment ? 's.currency' : 'NULL'} AS currency
     FROM "Employee" e
-    LEFT JOIN LATERAL (
+    ${hasSalaryAssignment ? `LEFT JOIN LATERAL (
       SELECT amount, currency
       FROM "SalaryAssignment"
       WHERE "companyId" = e."companyId"
         AND "employeeId" = e.id
       ORDER BY "effectiveAt" DESC
       LIMIT 1
-    ) s ON TRUE
+    ) s ON TRUE` : ''}
   `)
 
   for (const employee of employees) {
@@ -148,6 +154,21 @@ async function columnExists(tableName, columnName) {
     `,
     tableName,
     columnName,
+  )
+
+  return result.length > 0
+}
+
+async function tableExists(tableName) {
+  const result = await prisma.$queryRawUnsafe(
+    `
+      SELECT 1
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+        AND table_name = $1
+      LIMIT 1
+    `,
+    tableName,
   )
 
   return result.length > 0
