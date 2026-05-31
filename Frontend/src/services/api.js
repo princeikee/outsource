@@ -77,6 +77,20 @@ export const leaveApi = {
   review: (token, id, body) => apiRequest(`/leave/${id}/review`, { method: 'PATCH', token, body }),
 }
 
+export const attendanceApi = {
+  daily: (token) => apiRequest('/attendance/daily', { token }),
+  history: (token, employeeId, query = {}) => {
+    const params = new URLSearchParams()
+    Object.entries(query).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') params.set(key, value)
+    })
+    const search = params.toString()
+    return apiRequest(`/attendance/employees/${employeeId}/history${search ? `?${search}` : ''}`, { token })
+  },
+  clockIn: (token, body) => apiRequest('/attendance/clock-in', { method: 'POST', token, body }),
+  clockOut: (token, body) => apiRequest('/attendance/clock-out', { method: 'POST', token, body }),
+}
+
 export const accountingApi = {
   list: (token) => apiRequest('/accounting', { token }),
   summary: (token) => apiRequest('/accounting/summary', { token }),

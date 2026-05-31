@@ -6,8 +6,17 @@ const prisma = new PrismaClient()
 async function main() {
   await prisma.$executeRawUnsafe('ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS \'EMPLOYEE\'')
   await prisma.$executeRawUnsafe('ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN NOT NULL DEFAULT true')
+  await prisma.$executeRawUnsafe('ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "officeLatitude" DECIMAL(10,7)')
+  await prisma.$executeRawUnsafe('ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "officeLongitude" DECIMAL(10,7)')
+  await prisma.$executeRawUnsafe('ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "officeRadiusMeters" INTEGER')
   await prisma.$executeRawUnsafe('ALTER TABLE "Employee" ADD COLUMN IF NOT EXISTS "userId" TEXT')
   await prisma.$executeRawUnsafe('ALTER TABLE "Employee" ADD COLUMN IF NOT EXISTS "departmentId" TEXT')
+  await prisma.$executeRawUnsafe('ALTER TABLE "AttendanceRecord" ADD COLUMN IF NOT EXISTS "clockInLatitude" DECIMAL(10,7)')
+  await prisma.$executeRawUnsafe('ALTER TABLE "AttendanceRecord" ADD COLUMN IF NOT EXISTS "clockInLongitude" DECIMAL(10,7)')
+  await prisma.$executeRawUnsafe('ALTER TABLE "AttendanceRecord" ADD COLUMN IF NOT EXISTS "clockInDistanceMeters" INTEGER')
+  await prisma.$executeRawUnsafe('ALTER TABLE "AttendanceRecord" ADD COLUMN IF NOT EXISTS "clockOutLatitude" DECIMAL(10,7)')
+  await prisma.$executeRawUnsafe('ALTER TABLE "AttendanceRecord" ADD COLUMN IF NOT EXISTS "clockOutLongitude" DECIMAL(10,7)')
+  await prisma.$executeRawUnsafe('ALTER TABLE "AttendanceRecord" ADD COLUMN IF NOT EXISTS "clockOutDistanceMeters" INTEGER')
 
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS "Department" (

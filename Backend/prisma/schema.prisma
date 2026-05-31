@@ -54,6 +54,9 @@ model Company {
   suspendedAt        DateTime?
   suspendedBy        String?
   deletedAt          DateTime?
+  officeLatitude     Decimal?            @db.Decimal(10, 7)
+  officeLongitude    Decimal?            @db.Decimal(10, 7)
+  officeRadiusMeters Int?
   appeals            CompanyAppeal[]
   users              User[]
   departments        Department[]
@@ -183,6 +186,12 @@ model AttendanceRecord {
   workDate    DateTime
   clockInAt   DateTime?
   clockOutAt  DateTime?
+  clockInLatitude  Decimal?         @db.Decimal(10, 7)
+  clockInLongitude Decimal?         @db.Decimal(10, 7)
+  clockInDistanceMeters Int?
+  clockOutLatitude Decimal?         @db.Decimal(10, 7)
+  clockOutLongitude Decimal?        @db.Decimal(10, 7)
+  clockOutDistanceMeters Int?
   status      AttendanceStatus @default(clocked_in)
   notes       String?
   company     Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)

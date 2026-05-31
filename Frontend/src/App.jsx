@@ -146,7 +146,7 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard auth={auth} />} />
           <Route path="/hr" element={<HR auth={auth} />} />
           <Route path="/employees" element={<Employees auth={auth} />} />
-          <Route path="/attendance" element={<Attendance />} />
+          <Route path="/attendance" element={<Attendance auth={auth} />} />
           <Route path="/payroll" element={<Payroll auth={auth} />} />
           <Route path="/accounting" element={<Accounting auth={auth} />} />
           <Route path="/reports" element={<Reports />} />
@@ -154,7 +154,7 @@ export default function App() {
         </Route>
 
         <Route element={<RequireEmployee isEmployee={isEmployee} />}>
-          <Route path="/employee/attendance" element={<EmployeeAttendance />} />
+          <Route path="/employee/attendance" element={<EmployeeAttendance auth={auth} />} />
           <Route path="/employee/leave" element={<LeaveRequests auth={auth} />} />
           <Route path="/employee/payslips" element={<Payslips auth={auth} />} />
           <Route path="/employee/profile" element={<EmployeeProfile user={auth?.user} />} />
