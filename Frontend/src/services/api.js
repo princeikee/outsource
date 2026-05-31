@@ -97,6 +97,17 @@ export const accountingApi = {
   create: (token, body) => apiRequest('/accounting', { method: 'POST', token, body }),
 }
 
+export const reportsApi = {
+  generate: (token, query = {}) => {
+    const params = new URLSearchParams()
+    Object.entries(query).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') params.set(key, value)
+    })
+    const search = params.toString()
+    return apiRequest(`/reports${search ? `?${search}` : ''}`, { token })
+  },
+}
+
 export const settingsApi = {
   get: (token) => apiRequest('/settings', { token }),
   updateProfile: (token, body) => apiRequest('/settings/profile', { method: 'PATCH', token, body }),

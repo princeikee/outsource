@@ -149,7 +149,7 @@ export default function App() {
           <Route path="/attendance" element={<Attendance auth={auth} />} />
           <Route path="/payroll" element={<Payroll auth={auth} />} />
           <Route path="/accounting" element={<Accounting auth={auth} />} />
-          <Route path="/reports" element={<Reports />} />
+          <Route path="/reports" element={<Reports auth={auth} />} />
           <Route path="/settings" element={<Settings auth={auth} onAuthUpdate={updateStoredAuth} />} />
         </Route>
 

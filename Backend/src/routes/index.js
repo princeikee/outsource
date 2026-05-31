@@ -8,6 +8,7 @@ import employeeRoutes from './v1/employee.routes.js'
 import hrRoutes from './v1/hr.routes.js'
 import leaveRoutes from './v1/leave.routes.js'
 import payrollRoutes from './v1/payroll.routes.js'
+import reportRoutes from './v1/report.routes.js'
 import settingsRoutes from './v1/settings.routes.js'
 
 const router = Router()
@@ -21,6 +22,7 @@ router.use('/leave', leaveRoutes)
 router.use('/attendance', attendanceRoutes)
 router.use('/payroll', payrollRoutes)
 router.use('/accounting', accountingRoutes)
+router.use('/reports', reportRoutes)
 router.use('/settings', settingsRoutes)
 
 export default router
