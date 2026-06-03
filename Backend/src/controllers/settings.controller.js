@@ -12,3 +12,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
 export const updateCompany = asyncHandler(async (req, res) => {
   res.json(await settingsService.updateCompanySettings(req.user, req.validated.body))
 })
+
+export const updatePassword = asyncHandler(async (req, res) => {
+  res.json(await settingsService.updatePassword(req.user, req.validated.body))
+})

@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs'
 import ApiError from '../utils/ApiError.js'
 import { prisma } from '../config/prisma.js'
 
@@ -15,7 +16,11 @@ export async function getSettings(user) {
       c.status::text AS "companyStatus",
       c."officeLatitude",
       c."officeLongitude",
-      c."officeRadiusMeters"
+      c."officeRadiusMeters",
+      c."defaultCurrency",
+      c.timezone,
+      c."workStartTime",
+      c."lateGraceMinutes"
     FROM "User" u
     JOIN "Company" c ON c.id = u."companyId"
     WHERE u.id = ${user.sub}
@@ -40,6 +45,10 @@ export async function getSettings(user) {
       officeLatitude: record.officeLatitude === null || record.officeLatitude === undefined ? '' : Number(record.officeLatitude),
       officeLongitude: record.officeLongitude === null || record.officeLongitude === undefined ? '' : Number(record.officeLongitude),
       officeRadiusMeters: record.officeRadiusMeters || '',
+      defaultCurrency: record.defaultCurrency || 'NGN',
+      timezone: record.timezone || 'Africa/Lagos',
+      workStartTime: record.workStartTime || '09:00',
+      lateGraceMinutes: record.lateGraceMinutes ?? 0,
     },
   }
 }
@@ -56,7 +65,7 @@ export async function updateProfile(user, { name }) {
   return updated
 }
 
-export async function updateCompanySettings(user, { email, name, officeLatitude, officeLongitude, officeRadiusMeters }) {
+export async function updateCompanySettings(user, { defaultCurrency, email, lateGraceMinutes, name, officeLatitude, officeLongitude, officeRadiusMeters, timezone, workStartTime }) {
   if (!['COMPANY_ADMIN', 'HR'].includes(user.role)) {
     throw new ApiError(403, 'Only company admins can update company settings')
   }
@@ -89,6 +98,10 @@ export async function updateCompanySettings(user, { email, name, officeLatitude,
         "officeLatitude" = ${normalizedOfficeLatitude},
         "officeLongitude" = ${normalizedOfficeLongitude},
         "officeRadiusMeters" = ${normalizedOfficeRadiusMeters},
+        "defaultCurrency" = ${defaultCurrency || 'NGN'},
+        timezone = ${timezone || 'Africa/Lagos'},
+        "workStartTime" = ${workStartTime || '09:00'},
+        "lateGraceMinutes" = ${lateGraceMinutes ?? 0},
         "updatedAt" = NOW()
     WHERE id = ${user.companyId}
     RETURNING
@@ -98,7 +111,11 @@ export async function updateCompanySettings(user, { email, name, officeLatitude,
       status::text AS status,
       "officeLatitude",
       "officeLongitude",
-      "officeRadiusMeters"
+      "officeRadiusMeters",
+      "defaultCurrency",
+      timezone,
+      "workStartTime",
+      "lateGraceMinutes"
   `
 
   if (!updated) throw new ApiError(404, 'Company not found')
@@ -107,6 +124,31 @@ export async function updateCompanySettings(user, { email, name, officeLatitude,
     officeLatitude: updated.officeLatitude === null || updated.officeLatitude === undefined ? '' : Number(updated.officeLatitude),
     officeLongitude: updated.officeLongitude === null || updated.officeLongitude === undefined ? '' : Number(updated.officeLongitude),
   }
+}
+
+export async function updatePassword(user, { currentPassword, newPassword }) {
+  const [record] = await prisma.$queryRaw`
+    SELECT id, "passwordHash"
+    FROM "User"
+    WHERE id = ${user.sub}
+    LIMIT 1
+  `
+
+  if (!record) throw new ApiError(404, 'User not found')
+
+  const isCurrentPasswordValid = await bcrypt.compare(currentPassword, record.passwordHash)
+  if (!isCurrentPasswordValid) throw new ApiError(400, 'Current password is incorrect')
+
+  const passwordHash = await bcrypt.hash(newPassword, 12)
+
+  await prisma.$executeRaw`
+    UPDATE "User"
+    SET "passwordHash" = ${passwordHash},
+        "updatedAt" = NOW()
+    WHERE id = ${user.sub}
+  `
+
+  return { message: 'Password updated successfully' }
 }
 
 function normalizeOptionalNumber(value) {

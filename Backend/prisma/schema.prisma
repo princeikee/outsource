@@ -22,6 +22,10 @@ model Company {
   officeLatitude       Decimal?              @db.Decimal(10, 7)
   officeLongitude      Decimal?              @db.Decimal(10, 7)
   officeRadiusMeters   Int?
+  defaultCurrency      String                @default("NGN")
+  timezone             String                @default("Africa/Lagos")
+  workStartTime        String                @default("09:00")
+  lateGraceMinutes     Int                   @default(0)
   accountingEntries    AccountingEntry[]
   attendanceRecords    AttendanceRecord[]
   appeals              CompanyAppeal[]

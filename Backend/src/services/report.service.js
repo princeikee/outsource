@@ -144,17 +144,18 @@ async function payrollReport(companyId, period) {
 }
 
 async function attendanceReport(companyId, period) {
-  const [records, activeEmployeeCount] = await Promise.all([
+  const [records, activeEmployeeCount, company] = await Promise.all([
     prisma.attendanceRecord.findMany({
       where: { companyId, workDate: { gte: startOfDay(period.from), lte: endOfDay(period.to) } },
       include: { employee: true },
       orderBy: { workDate: 'desc' },
     }),
     prisma.employee.count({ where: { companyId, isActive: true } }),
+    getCompanyAttendancePolicy(companyId),
   ])
 
   const completed = records.filter((record) => record.clockInAt && record.clockOutAt).length
-  const late = records.filter((record) => record.clockInAt && record.clockInAt.getHours() >= 9).length
+  const late = records.filter((record) => isLateArrival(record.clockInAt, company)).length
 
   return {
     module: 'attendance',
@@ -273,4 +274,23 @@ function formatDate(value) {
 
 function monthName(month) {
   return new Date(2026, month - 1, 1).toLocaleString('en', { month: 'long' })
+}
+
+async function getCompanyAttendancePolicy(companyId) {
+  const [company] = await prisma.$queryRaw`
+    SELECT "workStartTime", "lateGraceMinutes"
+    FROM "Company"
+    WHERE id = ${companyId}
+    LIMIT 1
+  `
+
+  return company || { lateGraceMinutes: 0, workStartTime: '09:00' }
+}
+
+function isLateArrival(clockInAt, company) {
+  if (!clockInAt) return false
+  const [hour, minute] = (company.workStartTime || '09:00').split(':').map(Number)
+  const cutoff = new Date(clockInAt)
+  cutoff.setHours(hour, minute + Number(company.lateGraceMinutes || 0), 0, 0)
+  return clockInAt >= cutoff
 }

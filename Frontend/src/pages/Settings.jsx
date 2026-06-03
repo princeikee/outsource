@@ -1,15 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Icon from '../components/Icon'
 import { settingsApi } from '../services/api'
+
+const currencies = ['NGN', 'USD', 'GBP', 'EUR', 'GHS', 'KES', 'ZAR']
+const timezones = ['Africa/Lagos', 'Africa/Accra', 'Africa/Nairobi', 'Africa/Johannesburg', 'Europe/London', 'America/New_York']
 
 export default function Settings({ auth, onAuthUpdate }) {
   const [settings, setSettings] = useState(null)
   const [profileForm, setProfileForm] = useState({ name: '' })
-  const [companyForm, setCompanyForm] = useState({ email: '', name: '', officeLatitude: '', officeLongitude: '', officeRadiusMeters: '' })
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' })
+  const [companyForm, setCompanyForm] = useState(defaultCompanyForm)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [isLoading, setLoading] = useState(true)
-  const [isSaving, setSaving] = useState(false)
+  const [savingKey, setSavingKey] = useState('')
   const canEditCompany = auth?.user?.role === 'COMPANY_ADMIN' || auth?.user?.role === 'HR'
 
   useEffect(() => {
@@ -25,11 +29,15 @@ export default function Settings({ auth, onAuthUpdate }) {
       setSettings(data)
       setProfileForm({ name: data.user.name || '' })
       setCompanyForm({
-        name: data.company.name || '',
+        defaultCurrency: data.company.defaultCurrency || 'NGN',
         email: data.company.email || '',
+        lateGraceMinutes: data.company.lateGraceMinutes ?? 0,
+        name: data.company.name || '',
         officeLatitude: data.company.officeLatitude || '',
         officeLongitude: data.company.officeLongitude || '',
         officeRadiusMeters: data.company.officeRadiusMeters || '',
+        timezone: data.company.timezone || 'Africa/Lagos',
+        workStartTime: data.company.workStartTime || '09:00',
       })
     } catch (loadError) {
       setError(loadError.message)
@@ -40,37 +48,44 @@ export default function Settings({ auth, onAuthUpdate }) {
 
   async function saveProfile(event) {
     event.preventDefault()
-    setSaving(true)
-    setError('')
-    setNotice('')
-
-    try {
+    await runSave('profile', async () => {
       const updated = await settingsApi.updateProfile(auth.token, profileForm)
       setSettings((current) => ({ ...current, user: updated }))
       onAuthUpdate?.({ user: { ...auth.user, name: updated.name } })
       setNotice('Profile settings saved.')
-    } catch (saveError) {
-      setError(saveError.message)
-    } finally {
-      setSaving(false)
-    }
+    })
+  }
+
+  async function savePassword(event) {
+    event.preventDefault()
+    await runSave('password', async () => {
+      await settingsApi.updatePassword(auth.token, passwordForm)
+      setPasswordForm({ currentPassword: '', newPassword: '' })
+      setNotice('Password updated successfully.')
+    })
   }
 
   async function saveCompany(event) {
     event.preventDefault()
-    setSaving(true)
-    setError('')
-    setNotice('')
-
-    try {
+    await runSave('company', async () => {
       const updated = await settingsApi.updateCompany(auth.token, companyForm)
       setSettings((current) => ({ ...current, company: updated }))
       onAuthUpdate?.({ user: { ...auth.user, company: { ...auth.user.company, name: updated.name, email: updated.email } } })
       setNotice('Company settings saved.')
+    })
+  }
+
+  async function runSave(key, action) {
+    setSavingKey(key)
+    setError('')
+    setNotice('')
+
+    try {
+      await action()
     } catch (saveError) {
       setError(saveError.message)
     } finally {
-      setSaving(false)
+      setSavingKey('')
     }
   }
 
@@ -98,69 +113,117 @@ export default function Settings({ auth, onAuthUpdate }) {
     )
   }
 
+  const settingSummary = useMemo(() => {
+    const officeReady = companyForm.officeLatitude && companyForm.officeLongitude && companyForm.officeRadiusMeters
+    return [
+      { icon: 'shield-check', label: 'Account', value: settings?.user?.isActive ? 'Active' : 'Disabled' },
+      { icon: 'building-2', label: 'Company', value: settings?.company?.status || 'ACTIVE' },
+      { icon: 'calendar-check', label: 'Attendance', value: officeReady ? `${companyForm.officeRadiusMeters}m radius` : 'Not configured' },
+      { icon: 'clock', label: 'Late Rule', value: `${companyForm.workStartTime} + ${companyForm.lateGraceMinutes || 0}m` },
+    ]
+  }, [companyForm, settings])
+
   if (isLoading) {
     return <div className="rounded-lg border border-gray-100 bg-white p-6 text-sm text-gray-500 shadow-sm">Loading settings...</div>
   }
 
   return (
     <div className="space-y-6">
-      <section className="rounded-lg border border-gray-100 bg-white p-6 shadow-sm">
-        <div className="flex items-start gap-4">
-          <div className="rounded-lg bg-primary-50 p-3 text-primary-600">
-            <Icon name="settings" className="h-6 w-6" />
+      <section className="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
+        <div className="bg-gradient-to-br from-gray-950 via-primary-900 to-emerald-800 px-6 py-7 text-white">
+          <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-emerald-100">Workspace Control Center</p>
+              <h3 className="mt-2 text-2xl font-extrabold">Settings</h3>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75">Manage account security, company identity, office attendance rules, and business defaults for Taskflow ERP.</p>
+            </div>
+            <div className="rounded-lg bg-white/10 px-4 py-3 text-sm font-semibold ring-1 ring-white/20">
+              {settings?.company?.name || 'Company Workspace'}
+            </div>
           </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">Settings</h3>
-            <p className="mt-1 text-sm text-gray-500">Manage your account and workspace preferences.</p>
-          </div>
+        </div>
+        <div className="grid grid-cols-1 divide-y divide-gray-100 md:grid-cols-4 md:divide-x md:divide-y-0">
+          {settingSummary.map((item) => <SummaryTile key={item.label} item={item} />)}
         </div>
       </section>
 
       {error && <Notice tone="error">{error}</Notice>}
       {notice && <Notice>{notice}</Notice>}
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <form className="rounded-lg border border-gray-100 bg-white p-6 shadow-sm" onSubmit={saveProfile}>
-          <SectionTitle title="Account Profile" subtitle="These details identify you inside Taskflow ERP." />
-          <div className="space-y-4">
-            <Field label="Full Name" name="name" value={profileForm.name} onChange={(event) => setProfileForm({ name: event.target.value })} required />
-            <ReadOnlyField label="Email" value={settings?.user?.email || 'Not set'} />
-            <ReadOnlyField label="Role" value={settings?.user?.role || 'Not set'} />
-          </div>
-          <div className="mt-6 flex justify-end">
-            <button type="submit" disabled={isSaving} className="min-h-11 rounded-lg bg-primary-600 px-5 py-2 text-sm font-bold text-white hover:bg-primary-700 disabled:opacity-70">
-              {isSaving ? 'Saving...' : 'Save Profile'}
-            </button>
-          </div>
-        </form>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <div className="space-y-6">
+          <form className="rounded-lg border border-gray-100 bg-white p-6 shadow-sm" onSubmit={saveProfile}>
+            <SectionTitle icon="user-check" title="Account Profile" subtitle="Personal details used across your ERP workspace." />
+            <div className="space-y-4">
+              <Field label="Full Name" name="name" value={profileForm.name} onChange={(event) => setProfileForm({ name: event.target.value })} required />
+              <ReadOnlyField label="Email" value={settings?.user?.email || 'Not set'} />
+              <ReadOnlyField label="Role" value={settings?.user?.role || 'Not set'} />
+            </div>
+            <ActionRow>
+              <PrimaryButton disabled={savingKey === 'profile'}>{savingKey === 'profile' ? 'Saving...' : 'Save Profile'}</PrimaryButton>
+            </ActionRow>
+          </form>
+
+          <form className="rounded-lg border border-gray-100 bg-white p-6 shadow-sm" onSubmit={savePassword}>
+            <SectionTitle icon="shield-check" title="Security" subtitle="Change your password without affecting other company users." />
+            <div className="space-y-4">
+              <Field label="Current Password" type="password" value={passwordForm.currentPassword} onChange={(event) => setPasswordForm((current) => ({ ...current, currentPassword: event.target.value }))} required />
+              <Field label="New Password" type="password" minLength="8" value={passwordForm.newPassword} onChange={(event) => setPasswordForm((current) => ({ ...current, newPassword: event.target.value }))} required />
+            </div>
+            <ActionRow>
+              <PrimaryButton disabled={savingKey === 'password'}>{savingKey === 'password' ? 'Updating...' : 'Update Password'}</PrimaryButton>
+            </ActionRow>
+          </form>
+        </div>
 
         <form className="rounded-lg border border-gray-100 bg-white p-6 shadow-sm" onSubmit={saveCompany}>
-          <SectionTitle title="Company Settings" subtitle={canEditCompany ? 'Update company identity used across this tenant.' : 'Company details are read only for your role.'} />
-          <div className="space-y-4">
-            <Field label="Company Name" name="name" value={companyForm.name} onChange={(event) => setCompanyForm((current) => ({ ...current, name: event.target.value }))} disabled={!canEditCompany} required />
-            <Field label="Company Email" name="email" type="email" value={companyForm.email} onChange={(event) => setCompanyForm((current) => ({ ...current, email: event.target.value }))} disabled={!canEditCompany} placeholder="company@example.com" />
-            <ReadOnlyField label="Company Status" value={settings?.company?.status || 'ACTIVE'} />
+          <SectionTitle icon="building-2" title="Company Workspace" subtitle={canEditCompany ? 'Set company identity, business defaults, and attendance rules.' : 'Company details are read only for your role.'} />
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Field label="Company Name" name="name" value={companyForm.name} onChange={(event) => updateCompanyField('name', event.target.value, setCompanyForm)} disabled={!canEditCompany} required />
+            <Field label="Company Email" name="email" type="email" value={companyForm.email} onChange={(event) => updateCompanyField('email', event.target.value, setCompanyForm)} disabled={!canEditCompany} placeholder="company@example.com" />
+            <Select label="Default Currency" value={companyForm.defaultCurrency} onChange={(event) => updateCompanyField('defaultCurrency', event.target.value, setCompanyForm)} disabled={!canEditCompany}>
+              {currencies.map((currency) => <option key={currency}>{currency}</option>)}
+            </Select>
+            <Select label="Timezone" value={companyForm.timezone} onChange={(event) => updateCompanyField('timezone', event.target.value, setCompanyForm)} disabled={!canEditCompany}>
+              {timezones.map((timezone) => <option key={timezone}>{timezone}</option>)}
+            </Select>
           </div>
-          <div className="mt-6 border-t border-gray-100 pt-6">
-            <SectionTitle title="Office Attendance Location" subtitle="Employees can clock in and out only inside this location radius." />
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <Field label="Latitude" name="officeLatitude" type="number" step="0.0000001" value={companyForm.officeLatitude} onChange={(event) => setCompanyForm((current) => ({ ...current, officeLatitude: event.target.value }))} disabled={!canEditCompany} placeholder="6.5243793" />
-              <Field label="Longitude" name="officeLongitude" type="number" step="0.0000001" value={companyForm.officeLongitude} onChange={(event) => setCompanyForm((current) => ({ ...current, officeLongitude: event.target.value }))} disabled={!canEditCompany} placeholder="3.3792057" />
-              <Field label="Radius (meters)" name="officeRadiusMeters" type="number" min="10" max="5000" value={companyForm.officeRadiusMeters} onChange={(event) => setCompanyForm((current) => ({ ...current, officeRadiusMeters: event.target.value }))} disabled={!canEditCompany} placeholder="100" />
-            </div>
-            {canEditCompany && (
-              <button type="button" onClick={useCurrentLocation} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 shadow-sm transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700">
-                <Icon name="activity" className="h-4 w-4" />
-                Use Current Location
-              </button>
-            )}
+
+          <Divider />
+
+          <SectionTitle compact icon="clock" title="Attendance Policy" subtitle="This controls location clock-in and late-arrival calculations." />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Field label="Work Start Time" name="workStartTime" type="time" value={companyForm.workStartTime} onChange={(event) => updateCompanyField('workStartTime', event.target.value, setCompanyForm)} disabled={!canEditCompany} />
+            <Field label="Grace Minutes" name="lateGraceMinutes" type="number" min="0" max="120" value={companyForm.lateGraceMinutes} onChange={(event) => updateCompanyField('lateGraceMinutes', event.target.value, setCompanyForm)} disabled={!canEditCompany} />
+          </div>
+
+          <Divider />
+
+          <SectionTitle compact icon="calendar-check" title="Office Attendance Location" subtitle="Employees can clock in and out only inside this office radius." />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Field label="Latitude" name="officeLatitude" type="number" step="0.0000001" value={companyForm.officeLatitude} onChange={(event) => updateCompanyField('officeLatitude', event.target.value, setCompanyForm)} disabled={!canEditCompany} placeholder="6.5243793" />
+            <Field label="Longitude" name="officeLongitude" type="number" step="0.0000001" value={companyForm.officeLongitude} onChange={(event) => updateCompanyField('officeLongitude', event.target.value, setCompanyForm)} disabled={!canEditCompany} placeholder="3.3792057" />
+            <Field label="Radius (meters)" name="officeRadiusMeters" type="number" min="10" max="5000" value={companyForm.officeRadiusMeters} onChange={(event) => updateCompanyField('officeRadiusMeters', event.target.value, setCompanyForm)} disabled={!canEditCompany} placeholder="100" />
           </div>
           {canEditCompany && (
-            <div className="mt-6 flex justify-end">
-              <button type="submit" disabled={isSaving} className="min-h-11 rounded-lg bg-primary-600 px-5 py-2 text-sm font-bold text-white hover:bg-primary-700 disabled:opacity-70">
-                {isSaving ? 'Saving...' : 'Save Company'}
-              </button>
-            </div>
+            <button type="button" onClick={useCurrentLocation} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold text-gray-700 shadow-sm transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700">
+              <Icon name="activity" className="h-4 w-4" />
+              Use Current Location
+            </button>
+          )}
+
+          <Divider />
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <ReadOnlyField label="Company Status" value={settings?.company?.status || 'ACTIVE'} />
+            <ReadOnlyField label="Workspace ID" value={settings?.company?.id || 'Not set'} />
+          </div>
+
+          {canEditCompany && (
+            <ActionRow>
+              <PrimaryButton disabled={savingKey === 'company'}>{savingKey === 'company' ? 'Saving...' : 'Save Workspace Settings'}</PrimaryButton>
+            </ActionRow>
           )}
         </form>
       </div>
@@ -168,11 +231,46 @@ export default function Settings({ auth, onAuthUpdate }) {
   )
 }
 
-function SectionTitle({ subtitle, title }) {
+const defaultCompanyForm = {
+  defaultCurrency: 'NGN',
+  email: '',
+  lateGraceMinutes: 0,
+  name: '',
+  officeLatitude: '',
+  officeLongitude: '',
+  officeRadiusMeters: '',
+  timezone: 'Africa/Lagos',
+  workStartTime: '09:00',
+}
+
+function updateCompanyField(name, value, setCompanyForm) {
+  setCompanyForm((current) => ({ ...current, [name]: value }))
+}
+
+function SummaryTile({ item }) {
   return (
-    <div className="mb-6">
-      <h4 className="text-lg font-bold text-gray-900">{title}</h4>
-      <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
+    <div className="flex items-center gap-3 bg-white px-5 py-4">
+      <div className="rounded-lg bg-gray-100 p-2 text-gray-700">
+        <Icon name={item.icon} className="h-5 w-5" />
+      </div>
+      <div>
+        <p className="text-xs font-bold uppercase text-gray-500">{item.label}</p>
+        <p className="mt-1 text-sm font-extrabold text-gray-900">{item.value}</p>
+      </div>
+    </div>
+  )
+}
+
+function SectionTitle({ compact = false, icon, subtitle, title }) {
+  return (
+    <div className={compact ? 'mb-4' : 'mb-6'}>
+      <div className="flex items-center gap-3">
+        <div className="rounded-lg bg-primary-50 p-2 text-primary-600">
+          <Icon name={icon} className="h-5 w-5" />
+        </div>
+        <h4 className="text-lg font-bold text-gray-900">{title}</h4>
+      </div>
+      <p className="mt-2 text-sm text-gray-500">{subtitle}</p>
     </div>
   )
 }
@@ -181,7 +279,18 @@ function Field({ label, ...props }) {
   return (
     <label className="block">
       <span className="mb-1 block text-sm font-semibold text-gray-700">{label}</span>
-      <input {...props} className="min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 disabled:bg-gray-50 disabled:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500" />
+      <input {...props} className="min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 transition disabled:bg-gray-50 disabled:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500" />
+    </label>
+  )
+}
+
+function Select({ children, label, ...props }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-sm font-semibold text-gray-700">{label}</span>
+      <select {...props} className="min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 transition disabled:bg-gray-50 disabled:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500">
+        {children}
+      </select>
     </label>
   )
 }
@@ -193,6 +302,22 @@ function ReadOnlyField({ label, value }) {
       <p className="mt-1 break-words font-medium text-gray-900">{value}</p>
     </div>
   )
+}
+
+function ActionRow({ children }) {
+  return <div className="mt-6 flex justify-end">{children}</div>
+}
+
+function PrimaryButton({ children, disabled }) {
+  return (
+    <button type="submit" disabled={disabled} className="min-h-11 rounded-lg bg-primary-600 px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70">
+      {children}
+    </button>
+  )
+}
+
+function Divider() {
+  return <div className="my-6 border-t border-gray-100" />
 }
 
 function Notice({ children, tone = 'success' }) {

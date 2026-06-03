@@ -110,6 +110,7 @@ export const reportsApi = {
 
 export const settingsApi = {
   get: (token) => apiRequest('/settings', { token }),
+  updatePassword: (token, body) => apiRequest('/settings/password', { method: 'PATCH', token, body }),
   updateProfile: (token, body) => apiRequest('/settings/profile', { method: 'PATCH', token, body }),
   updateCompany: (token, body) => apiRequest('/settings/company', { method: 'PATCH', token, body }),
 }

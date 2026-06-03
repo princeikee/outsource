@@ -95,7 +95,7 @@ export async function getDailyAttendance(companyId, date = new Date()) {
   ])
 
   const presentToday = records.length
-  const lateArrivals = records.filter((record) => record.clockInAt && record.clockInAt.getHours() >= 9).length
+  const lateArrivals = records.filter((record) => isLateArrival(record.clockInAt, company)).length
 
   return {
     office: formatOfficeConfig(company),
@@ -158,6 +158,7 @@ async function validateOfficeLocation(companyId, latitude, longitude) {
 async function getOfficeConfig(companyId) {
   const [company] = await prisma.$queryRaw`
     SELECT "officeLatitude", "officeLongitude", "officeRadiusMeters"
+      , "workStartTime", "lateGraceMinutes"
     FROM "Company"
     WHERE id = ${companyId}
     LIMIT 1
@@ -165,6 +166,14 @@ async function getOfficeConfig(companyId) {
 
   if (!company) throw new ApiError(404, 'Company not found')
   return company
+}
+
+function isLateArrival(clockInAt, company) {
+  if (!clockInAt) return false
+  const [hour, minute] = (company.workStartTime || '09:00').split(':').map(Number)
+  const cutoff = new Date(clockInAt)
+  cutoff.setHours(hour, minute + Number(company.lateGraceMinutes || 0), 0, 0)
+  return clockInAt >= cutoff
 }
 
 function formatOfficeConfig(company) {
