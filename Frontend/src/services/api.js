@@ -113,4 +113,5 @@ export const settingsApi = {
   updatePassword: (token, body) => apiRequest('/settings/password', { method: 'PATCH', token, body }),
   updateProfile: (token, body) => apiRequest('/settings/profile', { method: 'PATCH', token, body }),
   updateCompany: (token, body) => apiRequest('/settings/company', { method: 'PATCH', token, body }),
+  updatePlatform: (token, body) => apiRequest('/settings/platform', { method: 'PATCH', token, body }),
 }

@@ -3,6 +3,7 @@ import crypto from 'node:crypto'
 import ApiError from '../utils/ApiError.js'
 import { prisma } from '../config/prisma.js'
 import { signAccessToken } from '../utils/jwt.js'
+import { getPlatformSettings } from './settings.service.js'
 
 const userSelect = {
   id: true,
@@ -16,6 +17,11 @@ const userSelect = {
 }
 
 export async function registerCompany({ adminEmail, adminName, companyEmail, companyName, password }) {
+  const platformSettings = await getPlatformSettings()
+  if (!platformSettings.registrationEnabled) {
+    throw new ApiError(403, 'Company registration is currently closed. Contact platform support for access.')
+  }
+
   const existingUser = await findUserByEmail(adminEmail)
   if (existingUser) {
     throw new ApiError(409, 'This email is already in use. Please sign in or use another email.')
@@ -32,7 +38,19 @@ export async function registerCompany({ adminEmail, adminName, companyEmail, com
 
   return prisma.$transaction(async (tx) => {
     const company = await tx.company.create({
-      data: { name: companyName, email: companyEmail },
+      data: {
+        name: companyName,
+        email: companyEmail,
+        ...(platformSettings.requireCompanyApproval
+          ? {
+              isActive: false,
+              status: 'SUSPENDED',
+              suspensionReason: 'Pending super admin approval',
+              suspendedAt: new Date(),
+              suspendedBy: 'platform-settings',
+            }
+          : {}),
+      },
     })
 
     const [user] = await tx.$queryRaw`
@@ -41,6 +59,14 @@ export async function registerCompany({ adminEmail, adminName, companyEmail, com
       RETURNING "id", "companyId", NULL::text AS "employeeId", "name", "email", "role"
     `
     user.company = { id: company.id, name: company.name, email: company.email }
+
+    if (platformSettings.requireCompanyApproval) {
+      return {
+        company: { id: company.id, name: company.name, email: company.email },
+        message: 'Company account created and is pending super admin approval.',
+        pendingApproval: true,
+      }
+    }
 
     return { company: { id: company.id, name: company.name, email: company.email }, user, token: signAccessToken(user) }
   })
@@ -132,6 +158,11 @@ export async function loginUser({ companyEmail, companyId, email, password }) {
 }
 
 export async function submitCompanyAppeal({ companyId, email, message }) {
+  const platformSettings = await getPlatformSettings()
+  if (!platformSettings.appealsEnabled) {
+    throw new ApiError(403, 'Company appeals are currently disabled. Contact platform support directly.')
+  }
+
   const trimmedMessage = message?.trim()
   if (!trimmedMessage) throw new ApiError(400, 'Appeal message is required')
 

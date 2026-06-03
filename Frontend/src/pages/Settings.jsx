@@ -10,10 +10,12 @@ export default function Settings({ auth, onAuthUpdate }) {
   const [profileForm, setProfileForm] = useState({ name: '' })
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' })
   const [companyForm, setCompanyForm] = useState(defaultCompanyForm)
+  const [platformForm, setPlatformForm] = useState(defaultPlatformForm)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [isLoading, setLoading] = useState(true)
   const [savingKey, setSavingKey] = useState('')
+  const isSuperAdmin = auth?.user?.role === 'SUPER_ADMIN'
   const canEditCompany = auth?.user?.role === 'COMPANY_ADMIN' || auth?.user?.role === 'HR'
 
   useEffect(() => {
@@ -39,6 +41,18 @@ export default function Settings({ auth, onAuthUpdate }) {
         timezone: data.company.timezone || 'Africa/Lagos',
         workStartTime: data.company.workStartTime || '09:00',
       })
+      if (data.platform) {
+        setPlatformForm({
+          appealEmail: data.platform.appealEmail || '',
+          appealsEnabled: data.platform.appealsEnabled ?? true,
+          notifyOnAppeal: data.platform.notifyOnAppeal ?? true,
+          notifyOnNewCompany: data.platform.notifyOnNewCompany ?? true,
+          platformName: data.platform.platformName || 'Taskflow ERP',
+          registrationEnabled: data.platform.registrationEnabled ?? true,
+          requireCompanyApproval: data.platform.requireCompanyApproval ?? false,
+          supportEmail: data.platform.supportEmail || '',
+        })
+      }
     } catch (loadError) {
       setError(loadError.message)
     } finally {
@@ -72,6 +86,15 @@ export default function Settings({ auth, onAuthUpdate }) {
       setSettings((current) => ({ ...current, company: updated }))
       onAuthUpdate?.({ user: { ...auth.user, company: { ...auth.user.company, name: updated.name, email: updated.email } } })
       setNotice('Company settings saved.')
+    })
+  }
+
+  async function savePlatform(event) {
+    event.preventDefault()
+    await runSave('platform', async () => {
+      const updated = await settingsApi.updatePlatform(auth.token, platformForm)
+      setSettings((current) => ({ ...current, platform: updated }))
+      setNotice('Platform settings saved.')
     })
   }
 
@@ -114,6 +137,15 @@ export default function Settings({ auth, onAuthUpdate }) {
   }
 
   const settingSummary = useMemo(() => {
+    if (isSuperAdmin) {
+      return [
+        { icon: 'shield-check', label: 'Account', value: settings?.user?.isActive ? 'Active' : 'Disabled' },
+        { icon: 'user-check', label: 'Role', value: 'Super Admin' },
+        { icon: 'building-2', label: 'Tenants', value: 'Managed separately' },
+        { icon: 'settings', label: 'Scope', value: 'Platform access' },
+      ]
+    }
+
     const officeReady = companyForm.officeLatitude && companyForm.officeLongitude && companyForm.officeRadiusMeters
     return [
       { icon: 'shield-check', label: 'Account', value: settings?.user?.isActive ? 'Active' : 'Disabled' },
@@ -121,7 +153,7 @@ export default function Settings({ auth, onAuthUpdate }) {
       { icon: 'calendar-check', label: 'Attendance', value: officeReady ? `${companyForm.officeRadiusMeters}m radius` : 'Not configured' },
       { icon: 'clock', label: 'Late Rule', value: `${companyForm.workStartTime} + ${companyForm.lateGraceMinutes || 0}m` },
     ]
-  }, [companyForm, settings])
+  }, [companyForm, isSuperAdmin, settings])
 
   if (isLoading) {
     return <div className="rounded-lg border border-gray-100 bg-white p-6 text-sm text-gray-500 shadow-sm">Loading settings...</div>
@@ -129,20 +161,29 @@ export default function Settings({ auth, onAuthUpdate }) {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
-        <div className="bg-gradient-to-br from-gray-950 via-primary-900 to-emerald-800 px-6 py-7 text-white">
-          <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+      <section className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm shadow-slate-200/70">
+        <div className="relative overflow-hidden bg-sidebar px-6 py-8 text-white sm:px-8">
+          <div className="absolute inset-x-0 bottom-0 h-1 bg-primary-400" />
+          <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-emerald-100">Workspace Control Center</p>
-              <h3 className="mt-2 text-2xl font-extrabold">Settings</h3>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75">Manage account security, company identity, office attendance rules, and business defaults for Taskflow ERP.</p>
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary-400/30 bg-sidebar-hover px-3 py-1 text-xs font-extrabold uppercase tracking-widest text-primary-200">
+                <Icon name="settings" className="h-3.5 w-3.5" />
+                Workspace Control Center
+              </div>
+              <h3 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Settings</h3>
+              <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-zinc-300">
+                {isSuperAdmin
+                  ? 'Manage your platform administrator profile, sign-in security, and account access for Taskflow ERP.'
+                  : 'Manage account security, company identity, office attendance rules, and business defaults for Taskflow ERP.'}
+              </p>
             </div>
-            <div className="rounded-lg bg-white/10 px-4 py-3 text-sm font-semibold ring-1 ring-white/20">
-              {settings?.company?.name || 'Company Workspace'}
+            <div className="rounded-2xl border border-primary-400/25 bg-sidebar-hover px-5 py-4 text-sm font-bold text-white shadow-lg shadow-slate-950/20">
+              <p className="text-xs font-extrabold uppercase tracking-widest text-slate-400">{isSuperAdmin ? 'Access Level' : 'Workspace'}</p>
+              <p className="mt-1 max-w-64 truncate">{isSuperAdmin ? 'Platform Administration' : settings?.company?.name || 'Company Workspace'}</p>
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-1 divide-y divide-gray-100 md:grid-cols-4 md:divide-x md:divide-y-0">
+        <div className="grid grid-cols-1 gap-px bg-slate-100 p-2 md:grid-cols-4">
           {settingSummary.map((item) => <SummaryTile key={item.label} item={item} />)}
         </div>
       </section>
@@ -150,10 +191,10 @@ export default function Settings({ auth, onAuthUpdate }) {
       {error && <Notice tone="error">{error}</Notice>}
       {notice && <Notice>{notice}</Notice>}
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+      <div className={isSuperAdmin ? 'grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]' : 'grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]'}>
         <div className="space-y-6">
           <form className="rounded-lg border border-gray-100 bg-white p-6 shadow-sm" onSubmit={saveProfile}>
-            <SectionTitle icon="user-check" title="Account Profile" subtitle="Personal details used across your ERP workspace." />
+            <SectionTitle icon="user-check" title="Account Profile" subtitle={isSuperAdmin ? 'Personal details used for your platform administrator account.' : 'Personal details used across your ERP workspace.'} />
             <div className="space-y-4">
               <Field label="Full Name" name="name" value={profileForm.name} onChange={(event) => setProfileForm({ name: event.target.value })} required />
               <ReadOnlyField label="Email" value={settings?.user?.email || 'Not set'} />
@@ -165,7 +206,7 @@ export default function Settings({ auth, onAuthUpdate }) {
           </form>
 
           <form className="rounded-lg border border-gray-100 bg-white p-6 shadow-sm" onSubmit={savePassword}>
-            <SectionTitle icon="shield-check" title="Security" subtitle="Change your password without affecting other company users." />
+            <SectionTitle icon="shield-check" title="Security" subtitle={isSuperAdmin ? 'Change the password for your platform administrator sign-in.' : 'Change your password without affecting other company users.'} />
             <div className="space-y-4">
               <Field label="Current Password" type="password" value={passwordForm.currentPassword} onChange={(event) => setPasswordForm((current) => ({ ...current, currentPassword: event.target.value }))} required />
               <Field label="New Password" type="password" minLength="8" value={passwordForm.newPassword} onChange={(event) => setPasswordForm((current) => ({ ...current, newPassword: event.target.value }))} required />
@@ -176,6 +217,38 @@ export default function Settings({ auth, onAuthUpdate }) {
           </form>
         </div>
 
+        {isSuperAdmin ? (
+          <form className="rounded-lg border border-gray-100 bg-white p-6 shadow-sm" onSubmit={savePlatform}>
+            <SectionTitle icon="settings" title="Platform Settings" subtitle="Control registration, default tenant rules, appeals, and platform contact details." />
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Field label="Platform Name" value={platformForm.platformName} onChange={(event) => updatePlatformField('platformName', event.target.value, setPlatformForm)} required />
+              <Field label="Support Email" type="email" value={platformForm.supportEmail} onChange={(event) => updatePlatformField('supportEmail', event.target.value, setPlatformForm)} placeholder="support@example.com" />
+            </div>
+
+            <Divider />
+
+            <SectionTitle compact icon="building-2" title="Registration Controls" subtitle="Decide how new companies enter the platform." />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <ToggleField label="Allow Company Registration" checked={platformForm.registrationEnabled} onChange={(event) => updatePlatformField('registrationEnabled', event.target.checked, setPlatformForm)} />
+              <ToggleField label="Require Super Admin Approval" checked={platformForm.requireCompanyApproval} onChange={(event) => updatePlatformField('requireCompanyApproval', event.target.checked, setPlatformForm)} />
+            </div>
+
+            <Divider />
+
+            <SectionTitle compact icon="shield-check" title="Appeals & Alerts" subtitle="Control appeal intake and platform notification preferences." />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <ToggleField label="Allow Company Appeals" checked={platformForm.appealsEnabled} onChange={(event) => updatePlatformField('appealsEnabled', event.target.checked, setPlatformForm)} />
+              <Field label="Appeal Email" type="email" value={platformForm.appealEmail} onChange={(event) => updatePlatformField('appealEmail', event.target.value, setPlatformForm)} placeholder="appeals@example.com" />
+              <ToggleField label="Notify on New Company" checked={platformForm.notifyOnNewCompany} onChange={(event) => updatePlatformField('notifyOnNewCompany', event.target.checked, setPlatformForm)} />
+              <ToggleField label="Notify on Appeal" checked={platformForm.notifyOnAppeal} onChange={(event) => updatePlatformField('notifyOnAppeal', event.target.checked, setPlatformForm)} />
+            </div>
+
+            <ActionRow>
+              <PrimaryButton disabled={savingKey === 'platform'}>{savingKey === 'platform' ? 'Saving...' : 'Save Platform Settings'}</PrimaryButton>
+            </ActionRow>
+          </form>
+        ) : (
         <form className="rounded-lg border border-gray-100 bg-white p-6 shadow-sm" onSubmit={saveCompany}>
           <SectionTitle icon="building-2" title="Company Workspace" subtitle={canEditCompany ? 'Set company identity, business defaults, and attendance rules.' : 'Company details are read only for your role.'} />
 
@@ -226,6 +299,7 @@ export default function Settings({ auth, onAuthUpdate }) {
             </ActionRow>
           )}
         </form>
+        )}
       </div>
     </div>
   )
@@ -243,19 +317,34 @@ const defaultCompanyForm = {
   workStartTime: '09:00',
 }
 
+const defaultPlatformForm = {
+  appealEmail: '',
+  appealsEnabled: true,
+  notifyOnAppeal: true,
+  notifyOnNewCompany: true,
+  platformName: 'Taskflow ERP',
+  registrationEnabled: true,
+  requireCompanyApproval: false,
+  supportEmail: '',
+}
+
 function updateCompanyField(name, value, setCompanyForm) {
   setCompanyForm((current) => ({ ...current, [name]: value }))
 }
 
+function updatePlatformField(name, value, setPlatformForm) {
+  setPlatformForm((current) => ({ ...current, [name]: value }))
+}
+
 function SummaryTile({ item }) {
   return (
-    <div className="flex items-center gap-3 bg-white px-5 py-4">
-      <div className="rounded-lg bg-gray-100 p-2 text-gray-700">
+    <div className="flex min-h-24 items-center gap-3 rounded-2xl bg-white px-5 py-4 shadow-sm">
+      <div className="rounded-xl bg-slate-100 p-2.5 text-sidebar">
         <Icon name={item.icon} className="h-5 w-5" />
       </div>
       <div>
-        <p className="text-xs font-bold uppercase text-gray-500">{item.label}</p>
-        <p className="mt-1 text-sm font-extrabold text-gray-900">{item.value}</p>
+        <p className="text-xs font-extrabold uppercase tracking-wide text-slate-500">{item.label}</p>
+        <p className="mt-1 text-sm font-black text-slate-900">{item.value}</p>
       </div>
     </div>
   )
@@ -301,6 +390,15 @@ function ReadOnlyField({ label, value }) {
       <p className="text-xs font-semibold uppercase text-gray-500">{label}</p>
       <p className="mt-1 break-words font-medium text-gray-900">{value}</p>
     </div>
+  )
+}
+
+function ToggleField({ checked, label, onChange }) {
+  return (
+    <label className="flex min-h-16 items-center justify-between gap-4 rounded-lg border border-gray-100 bg-gray-50 p-4">
+      <span className="text-sm font-semibold text-gray-800">{label}</span>
+      <input type="checkbox" checked={checked} onChange={onChange} className="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+    </label>
   )
 }
 

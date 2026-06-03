@@ -1,8 +1,8 @@
 import { Router } from 'express'
-import { settings, updateCompany, updatePassword, updateProfile } from '../../controllers/settings.controller.js'
+import { settings, updateCompany, updatePassword, updatePlatform, updateProfile } from '../../controllers/settings.controller.js'
 import { authenticate } from '../../middleware/auth.middleware.js'
 import { validate } from '../../middleware/validate.middleware.js'
-import { updateCompanySettingsSchema, updatePasswordSchema, updateProfileSchema } from '../../validators/settings.schema.js'
+import { updateCompanySettingsSchema, updatePasswordSchema, updatePlatformSettingsSchema, updateProfileSchema } from '../../validators/settings.schema.js'
 
 const router = Router()
 
@@ -11,6 +11,7 @@ router.use(authenticate)
 router.get('/', settings)
 router.patch('/profile', validate(updateProfileSchema), updateProfile)
 router.patch('/company', validate(updateCompanySettingsSchema), updateCompany)
+router.patch('/platform', validate(updatePlatformSettingsSchema), updatePlatform)
 router.patch('/password', validate(updatePasswordSchema), updatePassword)
 
 export default router

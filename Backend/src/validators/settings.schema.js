@@ -28,3 +28,16 @@ export const updatePasswordSchema = z.object({
     newPassword: z.string().min(8),
   }),
 })
+
+export const updatePlatformSettingsSchema = z.object({
+  body: z.object({
+    platformName: z.string().min(2).max(80),
+    supportEmail: z.string().email().optional().or(z.literal('')),
+    registrationEnabled: z.boolean().default(true),
+    requireCompanyApproval: z.boolean().default(false),
+    appealsEnabled: z.boolean().default(true),
+    appealEmail: z.string().email().optional().or(z.literal('')),
+    notifyOnNewCompany: z.boolean().default(true),
+    notifyOnAppeal: z.boolean().default(true),
+  }),
+})

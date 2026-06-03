@@ -28,6 +28,7 @@ export async function getSettings(user) {
   `
 
   if (!record) throw new ApiError(404, 'User settings not found')
+  const platform = user.role === 'SUPER_ADMIN' ? await getPlatformSettings() : null
 
   return {
     user: {
@@ -50,6 +51,7 @@ export async function getSettings(user) {
       workStartTime: record.workStartTime || '09:00',
       lateGraceMinutes: record.lateGraceMinutes ?? 0,
     },
+    ...(platform ? { platform } : {}),
   }
 }
 
@@ -149,6 +151,73 @@ export async function updatePassword(user, { currentPassword, newPassword }) {
   `
 
   return { message: 'Password updated successfully' }
+}
+
+export async function getPlatformSettings() {
+  await ensurePlatformSettings()
+
+  const [settings] = await prisma.$queryRaw`
+    SELECT
+      id,
+      "platformName",
+      "supportEmail",
+      "registrationEnabled",
+      "requireCompanyApproval",
+      "appealsEnabled",
+      "appealEmail",
+      "notifyOnNewCompany",
+      "notifyOnAppeal",
+      "updatedAt"
+    FROM "PlatformSettings"
+    WHERE id = 'platform'
+    LIMIT 1
+  `
+
+  return settings
+}
+
+export async function updatePlatformSettings(user, settings) {
+  if (user.role !== 'SUPER_ADMIN') {
+    throw new ApiError(403, 'Only super admins can update platform settings')
+  }
+
+  await ensurePlatformSettings()
+
+  const [updated] = await prisma.$queryRaw`
+    UPDATE "PlatformSettings"
+    SET
+      "platformName" = ${settings.platformName.trim()},
+      "supportEmail" = ${settings.supportEmail?.trim() || null},
+      "registrationEnabled" = ${settings.registrationEnabled},
+      "requireCompanyApproval" = ${settings.requireCompanyApproval},
+      "appealsEnabled" = ${settings.appealsEnabled},
+      "appealEmail" = ${settings.appealEmail?.trim() || null},
+      "notifyOnNewCompany" = ${settings.notifyOnNewCompany},
+      "notifyOnAppeal" = ${settings.notifyOnAppeal},
+      "updatedAt" = NOW()
+    WHERE id = 'platform'
+    RETURNING
+      id,
+      "platformName",
+      "supportEmail",
+      "registrationEnabled",
+      "requireCompanyApproval",
+      "appealsEnabled",
+      "appealEmail",
+      "notifyOnNewCompany",
+      "notifyOnAppeal",
+      "updatedAt"
+  `
+
+  return updated
+}
+
+async function ensurePlatformSettings() {
+  await prisma.$executeRaw`
+    INSERT INTO "PlatformSettings" ("id", "createdAt", "updatedAt")
+    VALUES ('platform', NOW(), NOW())
+    ON CONFLICT ("id") DO NOTHING
+  `
 }
 
 function normalizeOptionalNumber(value) {

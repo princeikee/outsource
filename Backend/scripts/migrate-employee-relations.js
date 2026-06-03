@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import '../src/config/env.js'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()

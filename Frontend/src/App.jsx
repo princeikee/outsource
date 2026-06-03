@@ -71,6 +71,11 @@ export default function App() {
     setAppealNotice('')
     await runAuthRequest(async () => {
       const result = await authApi.register(payload)
+      if (result.pendingApproval) {
+        setAppealNotice(result.message || 'Company account created and is pending super admin approval.')
+        navigate('/login', { replace: true })
+        return
+      }
       saveAuth(result)
       navigate('/dashboard', { replace: true })
     })
@@ -134,7 +139,7 @@ export default function App() {
       />
       <Route
         path="/register"
-        element={isLoggedIn ? <Navigate to={getHomePath(auth.user)} replace /> : <AuthPage mode="register" error={authError} isLoading={isAuthLoading} onRegister={handleRegister} />}
+        element={isLoggedIn ? <Navigate to={getHomePath(auth.user)} replace /> : <AuthPage mode="register" appealNotice={appealNotice} error={authError} isLoading={isAuthLoading} onRegister={handleRegister} />}
       />
 
       <Route element={isLoggedIn ? <AppShell auth={auth} onAuthUpdate={updateStoredAuth} onLogout={handleLogout} /> : <Navigate to="/login" replace />}>

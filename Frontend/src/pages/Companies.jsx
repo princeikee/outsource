@@ -136,6 +136,7 @@ export default function Companies({ auth }) {
                 <th className="px-6 py-4">Company</th>
                 <th className="px-6 py-4">Email</th>
                 <th className="px-6 py-4">Employees</th>
+                <th className="px-6 py-4">Created</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Moderation</th>
                 <th className="px-6 py-4 text-right">Actions</th>
@@ -143,7 +144,7 @@ export default function Companies({ auth }) {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {isLoading ? (
-                <tr><td className="px-6 py-6 text-gray-500" colSpan="6">Loading companies...</td></tr>
+                <tr><td className="px-6 py-6 text-gray-500" colSpan="7">Loading companies...</td></tr>
               ) : filteredCompanies.length ? (
                 filteredCompanies.map((company) => (
                   <CompanyRow
@@ -158,7 +159,7 @@ export default function Companies({ auth }) {
                   />
                 ))
               ) : (
-                <tr><td className="px-6 py-6 text-gray-500" colSpan="6">No companies found.</td></tr>
+                <tr><td className="px-6 py-6 text-gray-500" colSpan="7">No companies found.</td></tr>
               )}
             </tbody>
           </table>
@@ -219,6 +220,9 @@ function CompanyRow({ company, onDisableAdmins, onEnableAdmins, onReactivate, on
       </td>
       <td className="px-6 py-4 text-gray-600">{company.email || 'Not set'}</td>
       <td className="px-6 py-4 text-gray-600">{company.employeeCount} employees</td>
+      <td className="px-6 py-4 text-gray-600">
+        <div className="font-medium text-gray-800">{formatDateTime(company.createdAt)}</div>
+      </td>
       <td className="px-6 py-4"><span className={`rounded-full px-2 py-1 text-xs font-medium ${statusClass}`}>{status}</span></td>
       <td className="px-6 py-4 text-gray-600">
         {status === 'SUSPENDED' ? (
@@ -331,6 +335,7 @@ function CompanyDetails({ company, onClose, onReactivate }) {
     ['Company', company.name],
     ['Email', company.email || 'Not set'],
     ['Status', company.status],
+    ['Account Created', formatDateTime(company.createdAt)],
     ['Employees', company.employeeCount],
     ['Users', company.userCount ?? 'Not loaded'],
     ['Company Admins', `${company.activeAdminCount ?? 0} active of ${company.adminCount ?? 0}`],
@@ -374,4 +379,13 @@ function CompanyDetails({ company, onClose, onReactivate }) {
       </section>
     </div>
   )
+}
+
+function formatDateTime(value) {
+  if (!value) return 'Not recorded'
+
+  return new Date(value).toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
 }

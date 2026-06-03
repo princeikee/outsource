@@ -16,3 +16,7 @@ export const updateCompany = asyncHandler(async (req, res) => {
 export const updatePassword = asyncHandler(async (req, res) => {
   res.json(await settingsService.updatePassword(req.user, req.validated.body))
 })
+
+export const updatePlatform = asyncHandler(async (req, res) => {
+  res.json(await settingsService.updatePlatformSettings(req.user, req.validated.body))
+})
