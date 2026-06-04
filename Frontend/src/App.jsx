@@ -8,6 +8,7 @@ import Companies from './pages/Companies'
 import Dashboard from './pages/Dashboard'
 import Employees from './pages/Employees'
 import HR from './pages/HR'
+import LeaveRequestsAdmin from './pages/LeaveRequestsAdmin'
 import Payroll from './pages/Payroll'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
@@ -27,6 +28,7 @@ const companyAdminPages = {
   dashboard: { title: 'Dashboard Overview', path: '/dashboard' },
   hr: { title: 'HR Management', path: '/hr' },
   employees: { title: 'Employee Directory', path: '/employees' },
+  leaveRequests: { title: 'Leave Requests', path: '/leave-requests' },
   attendance: { title: 'Attendance Tracking', path: '/attendance' },
   payroll: { title: 'Payroll Processing', path: '/payroll' },
   accounting: { title: 'Basic Accounting', path: '/accounting' },
@@ -154,6 +156,7 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard auth={auth} />} />
           <Route path="/hr" element={<HR auth={auth} />} />
           <Route path="/employees" element={<Employees auth={auth} />} />
+          <Route path="/leave-requests" element={<LeaveRequestsAdmin auth={auth} />} />
           <Route path="/attendance" element={<Attendance auth={auth} />} />
           <Route path="/payroll" element={<Payroll auth={auth} />} />
           <Route path="/accounting" element={<Accounting auth={auth} />} />

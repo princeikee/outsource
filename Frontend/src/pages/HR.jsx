@@ -46,6 +46,7 @@ export default function HR({ auth }) {
   const [isPositionFormOpen, setPositionFormOpen] = useState(false)
   const [isSavingPosition, setSavingPosition] = useState(false)
   const [positionForm, setPositionForm] = useState(emptyPositionForm)
+  const [approvalNotes, setApprovalNotes] = useState({})
 
   useEffect(() => {
     let isMounted = true
@@ -80,11 +81,17 @@ export default function HR({ auth }) {
     setError('')
 
     try {
-      await leaveApi.review(auth.token, id, { status })
+      const note = (approvalNotes[id] || '').trim()
+      await leaveApi.review(auth.token, id, { status, ...(note ? { note } : {}) })
+      setApprovalNotes((current) => ({ ...current, [id]: '' }))
       await refreshHrData()
     } catch (reviewError) {
       setError(reviewError.message)
     }
+  }
+
+  function updateApprovalNote(id, value) {
+    setApprovalNotes((current) => ({ ...current, [id]: value }))
   }
 
   function updatePositionField(event) {
@@ -244,14 +251,26 @@ export default function HR({ auth }) {
                   </div>
                   {approval.reason && <p className="mb-4 text-sm text-gray-500">{approval.reason}</p>}
                   {approval.type === 'leave' ? (
-                    <div className="flex flex-wrap gap-2">
-                      <button type="button" className="min-h-10 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700" onClick={() => reviewLeaveRequest(approval.id, 'approved')}>
-                        Approve
-                      </button>
-                      <button type="button" className="min-h-10 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700" onClick={() => reviewLeaveRequest(approval.id, 'rejected')}>
-                        Reject
-                      </button>
-                    </div>
+                    <>
+                      <label className="mb-3 block text-sm font-semibold text-gray-700">
+                        Review note
+                        <textarea
+                          rows="3"
+                          value={approvalNotes[approval.id] || ''}
+                          onChange={(event) => updateApprovalNote(approval.id, event.target.value)}
+                          className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                          placeholder="Add a short comment for the employee"
+                        />
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" className="min-h-10 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700" onClick={() => reviewLeaveRequest(approval.id, 'approved')}>
+                          Approve
+                        </button>
+                        <button type="button" className="min-h-10 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700" onClick={() => reviewLeaveRequest(approval.id, 'rejected')}>
+                          Reject
+                        </button>
+                      </div>
+                    </>
                   ) : (
                     <button type="button" className="min-h-10 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700">
                       Open Queue

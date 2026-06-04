@@ -21,6 +21,7 @@ const companyAdminNavGroups = [
     items: [
       { key: 'hr', label: 'HR Management', icon: 'users' },
       { key: 'employees', label: 'Employee Management', icon: 'user-check' },
+      { key: 'leaveRequests', label: 'Leave Requests', icon: 'umbrella' },
       { key: 'attendance', label: 'Attendance', icon: 'calendar-check' },
       { key: 'payroll', label: 'Payroll', icon: 'banknote' },
     ],
@@ -53,6 +54,7 @@ export default function Layout({ activePage, onLogout, onNavigate, pageTitle, to
   const [isNotificationsOpen, setNotificationsOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [notificationError, setNotificationError] = useState('')
+  const [reviewNotes, setReviewNotes] = useState({})
   const navGroups = variant === 'super-admin' ? superAdminNavGroups : variant === 'employee' ? employeeNavGroups : companyAdminNavGroups
   const companyName = user?.company?.name || 'Company Workspace'
   const userName = user?.name || 'User'
@@ -84,10 +86,16 @@ export default function Layout({ activePage, onLogout, onNavigate, pageTitle, to
     }
   }
 
+  function updateReviewNote(id, value) {
+    setReviewNotes((current) => ({ ...current, [id]: value }))
+  }
+
   async function reviewLeaveRequest(id, status) {
     setNotificationError('')
     try {
-      await leaveApi.review(token, id, { status })
+      const note = reviewNotes[id]?.trim()
+      await leaveApi.review(token, id, { status, ...(note ? { note } : {}) })
+      setReviewNotes((current) => ({ ...current, [id]: '' }))
       await loadNotifications()
     } catch (error) {
       setNotificationError(error.message)
@@ -179,6 +187,8 @@ export default function Layout({ activePage, onLogout, onNavigate, pageTitle, to
                 <NotificationsPanel
                   error={notificationError}
                   notifications={notifications}
+                  reviewNotes={reviewNotes}
+                  onNoteChange={updateReviewNote}
                   onApprove={(id) => reviewLeaveRequest(id, 'approved')}
                   onClose={() => setNotificationsOpen(false)}
                   onDecline={(id) => reviewLeaveRequest(id, 'rejected')}
@@ -201,7 +211,7 @@ export default function Layout({ activePage, onLogout, onNavigate, pageTitle, to
   )
 }
 
-function NotificationsPanel({ error, notifications, onApprove, onClose, onDecline }) {
+function NotificationsPanel({ error, notifications, reviewNotes, onNoteChange, onApprove, onClose, onDecline }) {
   return (
     <section className="absolute right-0 top-11 z-50 w-[calc(100vw-2rem)] max-w-md overflow-hidden rounded-lg border border-gray-200 bg-white text-left shadow-xl">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
@@ -227,6 +237,16 @@ function NotificationsPanel({ error, notifications, onApprove, onClose, onDeclin
                   {request.reason && <p className="mt-1 line-clamp-2 text-sm text-gray-500">{request.reason}</p>}
                 </div>
                 <span className="rounded bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">Pending</span>
+              </div>
+              <div className="mb-3">
+                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">Review note</label>
+                <textarea
+                  rows="3"
+                  value={reviewNotes[request.id] || ''}
+                  onChange={(event) => onNoteChange(request.id, event.target.value)}
+                  className="mt-2 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  placeholder="Add a short comment for the employee"
+                />
               </div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" className="min-h-9 rounded-lg bg-green-600 px-3 py-2 text-xs font-bold text-white hover:bg-green-700" onClick={() => onApprove(request.id)}>
