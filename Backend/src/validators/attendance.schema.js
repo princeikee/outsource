@@ -18,3 +18,11 @@ export const attendanceHistorySchema = z.object({
     to: z.coerce.date().optional(),
   }),
 })
+
+export const companyAttendanceHistorySchema = z.object({
+  query: z.object({
+    from: z.coerce.date().optional(),
+    to: z.coerce.date().optional(),
+    employeeId: z.string().uuid().optional(),
+  }),
+})

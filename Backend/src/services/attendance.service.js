@@ -122,10 +122,40 @@ export function getAttendanceHistory(companyId, user, employeeId, { from, to }) 
   })
 }
 
+export function getCompanyAttendanceHistory(companyId, { employeeId, from, to }) {
+  const range = normalizeHistoryRange(from, to)
+
+  return prisma.attendanceRecord.findMany({
+    where: {
+      companyId,
+      ...(employeeId ? { employeeId } : {}),
+      workDate: { gte: range.from, lte: range.to },
+    },
+    include: { employee: true },
+    orderBy: [{ workDate: 'desc' }, { clockInAt: 'desc' }],
+  })
+}
+
 function startOfDay(date) {
   const value = new Date(date)
   value.setHours(0, 0, 0, 0)
   return value
+}
+
+function endOfDay(date) {
+  const value = new Date(date)
+  value.setHours(23, 59, 59, 999)
+  return value
+}
+
+function normalizeHistoryRange(from, to) {
+  const end = to ? endOfDay(to) : endOfDay(new Date())
+  const start = from ? startOfDay(from) : startOfDay(new Date(end))
+
+  if (!from) start.setDate(start.getDate() - 29)
+  if (start > end) throw new ApiError(400, 'Attendance history start date cannot be after end date')
+
+  return { from: start, to: end }
 }
 
 function resolveEmployeeId(user, employeeId) {

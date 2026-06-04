@@ -16,7 +16,7 @@ const statusTabs = [
   { key: 'rejected', label: 'Rejected' },
 ]
 
-export default function LeaveRequestsAdmin({ auth }) {
+function LeaveRequestsAdmin({ auth }) {
   const [requests, setRequests] = useState([])
   const [statusFilter, setStatusFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
@@ -232,3 +232,5 @@ function statusPill(status) {
 function formatDate(value) {
   return new Date(value).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })
 }
+
+export default LeaveRequestsAdmin

@@ -27,8 +27,8 @@ const superAdminPages = {
 const companyAdminPages = {
   dashboard: { title: 'Dashboard Overview', path: '/dashboard' },
   hr: { title: 'HR Management', path: '/hr' },
-  employees: { title: 'Employee Directory', path: '/employees' },
   leaveRequests: { title: 'Leave Requests', path: '/leave-requests' },
+  employees: { title: 'Employee Directory', path: '/employees' },
   attendance: { title: 'Attendance Tracking', path: '/attendance' },
   payroll: { title: 'Payroll Processing', path: '/payroll' },
   accounting: { title: 'Basic Accounting', path: '/accounting' },
@@ -155,8 +155,8 @@ export default function App() {
         <Route element={<RequireCompanyAdmin user={auth?.user} />}>
           <Route path="/dashboard" element={<Dashboard auth={auth} />} />
           <Route path="/hr" element={<HR auth={auth} />} />
-          <Route path="/employees" element={<Employees auth={auth} />} />
           <Route path="/leave-requests" element={<LeaveRequestsAdmin auth={auth} />} />
+          <Route path="/employees" element={<Employees auth={auth} />} />
           <Route path="/attendance" element={<Attendance auth={auth} />} />
           <Route path="/payroll" element={<Payroll auth={auth} />} />
           <Route path="/accounting" element={<Accounting auth={auth} />} />

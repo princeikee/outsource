@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Icon from '../components/Icon'
-import { reportsApi } from '../services/api'
+import { reportsApi, employeeApi } from '../services/api'
 
 const reportModules = [
   { color: 'bg-blue-50 text-blue-600', formats: 'CSV, on-screen', icon: 'users', key: 'hr', title: 'Employee Headcount' },
@@ -21,12 +21,14 @@ const ranges = [
 
 export default function Reports({ auth }) {
   const [filters, setFilters] = useState({ from: '', module: 'hr', range: 'this_month', to: '' })
+  const [employees, setEmployees] = useState([])
   const [report, setReport] = useState(null)
   const [error, setError] = useState('')
   const [isLoading, setLoading] = useState(false)
 
   useEffect(() => {
     generateReport()
+    loadEmployees()
   }, [])
 
   async function generateReport(event, override = {}) {
@@ -43,6 +45,14 @@ export default function Reports({ auth }) {
       setError(loadError.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function loadEmployees() {
+    try {
+      setEmployees(await employeeApi.list(auth.token))
+    } catch (err) {
+      // ignore
     }
   }
 

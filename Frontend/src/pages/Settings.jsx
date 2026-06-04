@@ -166,20 +166,7 @@ export default function Settings({ auth, onAuthUpdate }) {
           <div className="absolute inset-x-0 bottom-0 h-1 bg-primary-400" />
           <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary-400/30 bg-sidebar-hover px-3 py-1 text-xs font-extrabold uppercase tracking-widest text-primary-200">
-                <Icon name="settings" className="h-3.5 w-3.5" />
-                Workspace Control Center
-              </div>
-              <h3 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Settings</h3>
-              <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-zinc-300">
-                {isSuperAdmin
-                  ? 'Manage your platform administrator profile, sign-in security, and account access for Taskflow ERP.'
-                  : 'Manage account security, company identity, office attendance rules, and business defaults for Taskflow ERP.'}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-primary-400/25 bg-sidebar-hover px-5 py-4 text-sm font-bold text-white shadow-lg shadow-slate-950/20">
-              <p className="text-xs font-extrabold uppercase tracking-widest text-slate-400">{isSuperAdmin ? 'Access Level' : 'Workspace'}</p>
-              <p className="mt-1 max-w-64 truncate">{isSuperAdmin ? 'Platform Administration' : settings?.company?.name || 'Company Workspace'}</p>
+              <h3 className="text-3xl font-black tracking-tight sm:text-4xl">Settings</h3>
             </div>
           </div>
         </div>

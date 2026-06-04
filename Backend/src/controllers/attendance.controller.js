@@ -21,6 +21,10 @@ export const dailyAttendance = asyncHandler(async (req, res) => {
   res.json(await attendanceService.getDailyAttendance(getTenantId(req)))
 })
 
+export const companyAttendanceHistory = asyncHandler(async (req, res) => {
+  res.json(await attendanceService.getCompanyAttendanceHistory(getTenantId(req), req.validated.query))
+})
+
 export const attendanceHistory = asyncHandler(async (req, res) => {
   const { employeeId } = req.validated.params
   res.json(await attendanceService.getAttendanceHistory(getTenantId(req), req.user, employeeId, req.validated.query))

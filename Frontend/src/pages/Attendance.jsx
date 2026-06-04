@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Icon from '../components/Icon'
-import { attendanceApi } from '../services/api'
+import { attendanceApi, employeeApi } from '../services/api'
 
 export default function Attendance({ auth }) {
   const [data, setData] = useState({ records: [], summary: {}, office: {} })
@@ -9,6 +9,7 @@ export default function Attendance({ auth }) {
 
   useEffect(() => {
     loadAttendance()
+    loadEmployees()
   }, [auth.token])
 
   async function loadAttendance() {
@@ -24,9 +25,37 @@ export default function Attendance({ auth }) {
     }
   }
 
+  async function loadEmployees() {
+    try {
+      setEmployees(await employeeApi.list(auth.token))
+    } catch (err) {
+      // ignore employee load errors for now
+    }
+  }
+
+  async function loadHistory() {
+    if (!selectedEmployee) return
+    setHistoryLoading(true)
+    try {
+      // backend expects employee id and optional range query
+      const resp = await attendanceApi.history(auth.token, selectedEmployee, { range: historyRange })
+      setHistory(resp.records || resp || [])
+    } catch (err) {
+      setHistory([])
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
   const summary = data.summary || {}
   const records = data.records || []
   const office = data.office || {}
+
+  const [employees, setEmployees] = useState([])
+  const [selectedEmployee, setSelectedEmployee] = useState('')
+  const [history, setHistory] = useState([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyRange, setHistoryRange] = useState('this_month')
 
   return (
     <>
@@ -59,6 +88,60 @@ export default function Attendance({ auth }) {
             {office.isConfigured ? `${office.radiusMeters}m radius active` : 'Set office location in Settings'}
           </span>
         </div>
+      </section>
+
+      <section className="mb-6 rounded-lg border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h4 className="font-bold text-gray-900">Attendance History</h4>
+            <p className="mt-1 text-sm text-gray-500">View historical clock-ins for an employee over a selected period.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <select value={selectedEmployee} onChange={(e) => setSelectedEmployee(e.target.value)} className="min-h-11 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700">
+              <option value="">Select employee</option>
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</option>
+              ))}
+            </select>
+            <select value={historyRange} onChange={(e) => setHistoryRange(e.target.value)} className="min-h-11 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700">
+              <option value="this_week">This week</option>
+              <option value="this_month">This month</option>
+              <option value="last_month">Last month</option>
+              <option value="this_year">This year</option>
+            </select>
+            <button type="button" onClick={() => loadHistory()} className="min-h-11 rounded-lg bg-primary-600 px-4 py-2 text-sm font-bold text-white">Load</button>
+          </div>
+        </div>
+
+        {historyLoading && <div className="py-6 text-center text-sm text-gray-500">Loading history...</div>}
+        {!historyLoading && history.length === 0 && <div className="py-6 text-center text-sm text-gray-500">No historical records. Select an employee and load.</div>}
+
+        {!historyLoading && history.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-white font-medium text-gray-500">
+                <tr>
+                  <th className="px-6 py-3">Date</th>
+                  <th className="px-6 py-3">Clock In</th>
+                  <th className="px-6 py-3">Clock Out</th>
+                  <th className="px-6 py-3">Hours</th>
+                  <th className="px-6 py-3">Notes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {history.map((h) => (
+                  <tr key={h.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-gray-700">{new Date(h.date).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 text-gray-600">{formatTime(h.clockInAt)}</td>
+                    <td className="px-6 py-4 text-gray-600">{formatTime(h.clockOutAt)}</td>
+                    <td className="px-6 py-4 text-gray-600">{formatDuration(h.clockInAt, h.clockOutAt)}</td>
+                    <td className="px-6 py-4 italic text-gray-400">{h.notes || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <section className="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
